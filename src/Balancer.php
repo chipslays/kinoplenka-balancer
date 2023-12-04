@@ -57,7 +57,7 @@ class Balancer
         }, '1 day');
     }
 
-    public function get(string $method, array $parameters = [], int|string $ttl = '1 hour')
+    public function get(string $method, array $parameters = [], int|string $ttl = '1 hour'): array
     {
         $defaultParameters = [
             'token' => $this->token,
@@ -70,16 +70,12 @@ class Balancer
 
         $url = $this->endpoint . '/' . $method . '?' . $query;
 
-        $body = $this->execute($url);
+        $response = $this->execute($url, $ttl);
 
-        if (!$body) {
-            throw new Exception('Ошибка запроса к API');
-        }
-
-        return json_decode($body, true);
+        return $response;
     }
 
-    public function execute(string $url, int|string $ttl = '1 hour'): string|bool
+    public function execute(string $url, int|string $ttl = '1 hour'): array|bool
     {
         $cacheKey = md5($url);
 
@@ -91,12 +87,23 @@ class Balancer
 
         $body = curl_exec($this->httpClient);
 
-        if (curl_errno($this->httpClient) === 0 && curl_getinfo($this->httpClient, CURLINFO_HTTP_CODE) === 200) {
-            return false;
-        }
-
         $this->cache->set($cacheKey, $body, $ttl);
 
-        return $body;
+        if (!$body) {
+            throw new Exception('Ошибка запроса к API');
+        }
+
+        $response = json_decode($body, true);
+
+        if (isset($response['code']) && isset($response['status'])) {
+            throw new Exception('[' . $response['name'] . '] ' . $response['message'], $response['status']);
+        }
+
+        return $response;
+    }
+
+    public function getCache(): Cache
+    {
+        return $this->cache;
     }
 }
