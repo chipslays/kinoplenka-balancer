@@ -57,7 +57,7 @@ class Balancer
         }, '1 day');
     }
 
-    public function get(string $method, array $parameters = [], int|string $ttl = '1 hour'): array
+    public function get(string $method, array $parameters = [], int|string $ttl = '1 hour'): array|bool
     {
         $defaultParameters = [
             'token' => $this->token,
