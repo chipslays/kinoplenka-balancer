@@ -55,7 +55,7 @@ class Balancer
         $this->endpoint = rtrim(str_replace('/api.', '/api' . time() . '.', $endpoint), '/');
     }
 
-    public function get(string $method, array $parameters = [], int|string|bool $ttl = false): array
+    public function get(string $method, array $parameters = [], int|string|bool $ttl = false): array|bool
     {
         $defaultParameters = [
             'token' => $this->token,
