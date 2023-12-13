@@ -45,19 +45,17 @@ class Balancer
             return;
         }
 
-        $this->endpoint = $this->cache->through(function () {
-            $url = 'https://gist.githubusercontent.com/dev-dle/351244dc70855ebe2d13eafca621d298/raw';
-            $response = json_decode(file_get_contents($url), true);
+        $url = 'https://gist.githubusercontent.com/dev-dle/351244dc70855ebe2d13eafca621d298/raw';
+        $response = json_decode(file_get_contents($url), true);
 
-            if (!$endpoint = @$response['domains']['api']) {
-                throw new Exception('Домен для запросов к API не был получен автоматически');
-            }
+        if (!$endpoint = @$response['domains']['api']) {
+            throw new Exception('Домен для запросов к API не был получен автоматически');
+        }
 
-            return rtrim(str_replace('/api.', '/api' . time() . '.', $endpoint), '/');
-        }, '1 day');
+        $this->endpoint = rtrim(str_replace('/api.', '/api' . time() . '.', $endpoint), '/');
     }
 
-    public function get(string $method, array $parameters = [], int|string $ttl = '1 hour'): array
+    public function get(string $method, array $parameters = [], int|string|bool $ttl = false): array
     {
         $defaultParameters = [
             'token' => $this->token,
@@ -75,11 +73,11 @@ class Balancer
         return $response;
     }
 
-    public function execute(string $url, int|string $ttl = '1 hour'): array|bool
+    public function execute(string $url, int|string|bool $ttl = false): array|bool
     {
         $cacheKey = md5($url);
 
-        if ($this->cache->has($cacheKey)) {
+        if ($ttl !== false && $this->cache->has($cacheKey)) {
             return $this->cache->get($cacheKey);
         }
 
@@ -87,7 +85,9 @@ class Balancer
 
         $body = curl_exec($this->httpClient);
 
-        $this->cache->set($cacheKey, $body, $ttl);
+        if ($ttl !== false) {
+            $this->cache->set($cacheKey, $body, $ttl);
+        }
 
         if (!$body) {
             throw new Exception('Ошибка запроса к API');
